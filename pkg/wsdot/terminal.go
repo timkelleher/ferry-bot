@@ -17,7 +17,7 @@ func buildTerminalsURL(date time.Time) string {
 	return fmt.Sprintf("%s/terminals/%s?apiaccesscode=%s", baseURL, day, apiKey)
 }
 
-func Terminals(date time.Time) map[string]Terminal {
+func GetTerminals(date time.Time) map[string]Terminal {
 	payload := request(buildTerminalsURL(date))
 
 	terminals := make([]Terminal, 0)

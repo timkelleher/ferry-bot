@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
 var baseURL = "https://www.wsdot.wa.gov/ferries/api/schedule/rest"
-var apiKey = "5c72f79c-27bb-4aad-8e50-43603772b9be"
+var apiKey = os.Getenv("WSDOT_API_KEY")
+
+var validWSDOTDateTime = regexp.MustCompile(`(\d+)`)
 
 func request(url string) []byte {
 	logrus.Debug("API Call Start...")
@@ -33,4 +39,13 @@ func request(url string) []byte {
 
 	logrus.Debug(resp.StatusCode)
 	return bodyBytes
+}
+
+func WSDOTDate(date string) time.Time {
+	timestamp, err := strconv.Atoi(validWSDOTDateTime.FindString(date))
+	if err != nil {
+		return time.Now()
+	}
+
+	return time.Unix(int64(timestamp/1000), 0)
 }
