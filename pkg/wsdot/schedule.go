@@ -6,6 +6,29 @@ import (
 	"time"
 )
 
+type ScheduleEndpoint struct{}
+
+func (e ScheduleEndpoint) url(date time.Time, from, to int) string {
+	day := date.Format("2006-01-02")
+	return fmt.Sprintf("schedule/%s/%d/%d?apiaccesscode=%s",
+		day,
+		from,
+		to,
+		apiKey,
+	)
+}
+
+func (e ScheduleEndpoint) Payload(args EndpointArguments) (string, error) {
+	res, err := request(e.url(args.Date, args.Schedule.FromID, args.Schedule.ToID))
+	return string(res), err
+}
+
+func (e ScheduleEndpoint) Unmarshal(data string) (FerryData, error) {
+	schedule := Schedule{}
+	json.Unmarshal([]byte(data), &schedule)
+	return schedule, nil
+}
+
 type ScheduleTime struct {
 	VesselID          int    `json:"VesselID"`
 	VesselName        string `json:"VesselName"`
@@ -40,23 +63,4 @@ type Schedule struct {
 	Start          string          `json:"ScheduleStart"`
 	End            string          `json:"ScheduleEnd"`
 	TerminalCombos []TerminalCombo `json:"TerminalCombos"`
-}
-
-func buildScheduleURL(date time.Time, from, to Terminal) string {
-	day := date.Format("2006-01-02")
-	return fmt.Sprintf("%s/schedule/%s/%d/%d?apiaccesscode=%s",
-		baseURL,
-		day,
-		from.ID,
-		to.ID,
-		apiKey,
-	)
-}
-
-func GetSchedule(date time.Time, from, to Terminal) Schedule {
-	payload := request(buildScheduleURL(date, from, to))
-
-	schedule := Schedule{}
-	json.Unmarshal(payload, &schedule)
-	return schedule
 }

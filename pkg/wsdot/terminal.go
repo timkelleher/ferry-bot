@@ -6,27 +6,30 @@ import (
 	"time"
 )
 
-type Terminal struct {
-	ID          int    `json:"TerminalID"`
-	Description string `json:"Description"`
-}
+type TerminalsEndpoint struct{}
 
-func buildTerminalsURL(date time.Time) string {
-	//day := time.Now().AddDate(0, 0, 5).Format("2006-01-02")
+func (e TerminalsEndpoint) url(date time.Time) string {
 	day := date.Format("2006-01-02")
-	return fmt.Sprintf("%s/terminals/%s?apiaccesscode=%s", baseURL, day, apiKey)
+	return fmt.Sprintf("/terminals/%s?apiaccesscode=%s", day, apiKey)
 }
 
-func GetTerminals(date time.Time) map[string]Terminal {
-	payload := request(buildTerminalsURL(date))
+func (e TerminalsEndpoint) Payload(args EndpointArguments) (string, error) {
+	res, err := request(e.url(args.Date))
+	return string(res), err
+}
 
+func (e TerminalsEndpoint) Unmarshal(data string) (FerryData, error) {
 	terminals := make([]Terminal, 0)
-	json.Unmarshal(payload, &terminals)
+	json.Unmarshal([]byte(data), &terminals)
 
 	terminalsByDesc := make(map[string]Terminal)
 	for _, terminal := range terminals {
 		terminalsByDesc[terminal.Description] = terminal
 	}
+	return terminalsByDesc, nil
+}
 
-	return terminalsByDesc
+type Terminal struct {
+	ID          int    `json:"TerminalID"`
+	Description string `json:"Description"`
 }
