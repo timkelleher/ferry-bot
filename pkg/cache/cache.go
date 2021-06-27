@@ -2,11 +2,11 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-redis/cache/v8"
 	"github.com/go-redis/redis/v8"
+	"github.com/sirupsen/logrus"
 	"github.com/timkelleher/ferry-bot/pkg/wsdot"
 )
 
@@ -25,7 +25,9 @@ func getConn() *redis.Ring {
 	return conn
 }
 
-func Get(ctx context.Context, key string, tty time.Duration, getter func(args wsdot.EndpointArguments) (string, error), args wsdot.EndpointArguments) (string, error) {
+func Get(key string, tty time.Duration, logger *logrus.Logger, getter func(args wsdot.EndpointArguments) (string, error), args wsdot.EndpointArguments) (string, error) {
+	ctx := context.Background()
+
 	redisCache := cache.New(&cache.Options{
 		Redis:      getConn(),
 		LocalCache: cache.NewTinyLFU(1000, time.Minute),
@@ -37,7 +39,7 @@ func Get(ctx context.Context, key string, tty time.Duration, getter func(args ws
 	var wanted string
 	if cacheOn {
 		if err := redisCache.Get(ctx, key, &wanted); err == nil {
-			fmt.Println("Fetch cached value for key", key)
+			logger.WithField("key", key).Info("Fetching cached value")
 			return wanted, nil
 		}
 	}
@@ -53,9 +55,13 @@ func Get(ctx context.Context, key string, tty time.Duration, getter func(args ws
 			Value: data,
 			TTL:   time.Hour,
 		}); err != nil {
-			fmt.Printf("Cache Error with key %s: %s", key, err.Error())
+			logger.WithFields(logrus.Fields{
+				"key":   key,
+				"error": err.Error(),
+			}).Error("Fetching cached value")
 			return data, nil
 		}
+		logger.WithField("key", key).Info("Caching value")
 	}
 	return data, nil
 }
